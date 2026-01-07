@@ -4,6 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { Progress } from '@/components/ui/progress';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Profile {
   id: number;
@@ -14,6 +19,14 @@ interface Profile {
   interests: string[];
   image: string;
   compatibility: number;
+  gender: string;
+}
+
+interface Filters {
+  ageRange: [number, number];
+  city: string;
+  interests: string[];
+  gender: string;
 }
 
 const mockProfiles: Profile[] = [
@@ -26,6 +39,7 @@ const mockProfiles: Profile[] = [
     interests: ['Путешествия', 'Музыка', 'Фотография', 'Кофе'],
     image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=800&h=800&fit=crop',
     compatibility: 87,
+    gender: 'female',
   },
   {
     id: 2,
@@ -36,6 +50,7 @@ const mockProfiles: Profile[] = [
     interests: ['Спорт', 'Кино', 'Технологии', 'Книги'],
     image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=800&fit=crop',
     compatibility: 92,
+    gender: 'male',
   },
   {
     id: 3,
@@ -46,16 +61,41 @@ const mockProfiles: Profile[] = [
     interests: ['Искусство', 'Танцы', 'Йога', 'Природа'],
     image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=800&h=800&fit=crop',
     compatibility: 78,
+    gender: 'female',
   },
 ];
+
+const allInterests = ['Путешествия', 'Музыка', 'Спорт', 'Кино', 'Технологии', 'Книги', 'Искусство', 'Танцы', 'Йога', 'Природа', 'Фотография', 'Кофе'];
+const cities = ['Все города', 'Москва', 'Санкт-Петербург', 'Казань', 'Новосибирск', 'Екатеринбург'];
 
 export default function Index() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [liked, setLiked] = useState<number[]>([]);
   const [matches, setMatches] = useState<number[]>([]);
   const [animation, setAnimation] = useState('');
+  const [filters, setFilters] = useState<Filters>({
+    ageRange: [18, 50],
+    city: 'Все города',
+    interests: [],
+    gender: 'all',
+  });
+  const [filteredProfiles, setFilteredProfiles] = useState(mockProfiles);
 
-  const currentProfile = mockProfiles[currentIndex];
+  const applyFilters = () => {
+    const filtered = mockProfiles.filter((profile) => {
+      const ageMatch = profile.age >= filters.ageRange[0] && profile.age <= filters.ageRange[1];
+      const cityMatch = filters.city === 'Все города' || profile.city === filters.city;
+      const genderMatch = filters.gender === 'all' || profile.gender === filters.gender;
+      const interestsMatch = filters.interests.length === 0 || 
+        filters.interests.some((interest) => profile.interests.includes(interest));
+      
+      return ageMatch && cityMatch && genderMatch && interestsMatch;
+    });
+    setFilteredProfiles(filtered);
+    setCurrentIndex(0);
+  };
+
+  const currentProfile = filteredProfiles[currentIndex] || mockProfiles[0];
 
   const handleLike = () => {
     setAnimation('animate-scale-in');
@@ -78,23 +118,117 @@ export default function Index() {
   };
 
   const nextProfile = () => {
-    if (currentIndex < mockProfiles.length - 1) {
+    if (currentIndex < filteredProfiles.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       setCurrentIndex(0);
     }
   };
 
+  const toggleInterest = (interest: string) => {
+    setFilters(prev => ({
+      ...prev,
+      interests: prev.interests.includes(interest)
+        ? prev.interests.filter(i => i !== interest)
+        : [...prev.interests, interest]
+    }));
+  };
+
   return (
     <div className="min-h-screen gradient-bg">
       <div className="container mx-auto px-4 py-8">
         <header className="text-center mb-12 animate-fade-in">
-          <h1 className="text-5xl font-bold text-white mb-4 drop-shadow-lg">
-            Dating Platform
-          </h1>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <h1 className="text-5xl font-bold text-white drop-shadow-lg">
+              Dating Platform
+            </h1>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button size="icon" className="rounded-full gradient-bg hover-scale shadow-xl">
+                  <Icon name="SlidersHorizontal" size={24} className="text-white" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="w-[400px] sm:w-[540px]">
+                <SheetHeader>
+                  <SheetTitle className="text-2xl gradient-text">Фильтры поиска</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 space-y-6">
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">Возраст: {filters.ageRange[0]} - {filters.ageRange[1]}</Label>
+                    <Slider
+                      min={18}
+                      max={60}
+                      step={1}
+                      value={filters.ageRange}
+                      onValueChange={(value) => setFilters({ ...filters, ageRange: value as [number, number] })}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">Город</Label>
+                    <Select value={filters.city} onValueChange={(value) => setFilters({ ...filters, city: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cities.map((city) => (
+                          <SelectItem key={city} value={city}>{city}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">Пол</Label>
+                    <Select value={filters.gender} onValueChange={(value) => setFilters({ ...filters, gender: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Все</SelectItem>
+                        <SelectItem value="male">Мужской</SelectItem>
+                        <SelectItem value="female">Женский</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">Интересы</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {allInterests.map((interest) => (
+                        <div key={interest} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={interest}
+                            checked={filters.interests.includes(interest)}
+                            onCheckedChange={() => toggleInterest(interest)}
+                          />
+                          <Label htmlFor={interest} className="text-sm cursor-pointer">
+                            {interest}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button className="w-full gradient-bg text-white" onClick={applyFilters}>
+                    <Icon name="Search" size={20} className="mr-2" />
+                    Применить фильтры
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
           <p className="text-xl text-white/90 font-light">
             Найди свою половинку с умным алгоритмом совместимости
           </p>
+          {filters.interests.length > 0 || filters.city !== 'Все города' ? (
+            <div className="mt-4 flex justify-center gap-2 flex-wrap">
+              <Badge variant="secondary" className="bg-white/20 backdrop-blur-sm text-white border-white/30">
+                Найдено: {filteredProfiles.length}
+              </Badge>
+            </div>
+          ) : null}
         </header>
 
         <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto">
